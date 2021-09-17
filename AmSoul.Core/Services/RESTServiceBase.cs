@@ -14,16 +14,40 @@ namespace AmSoul.Core.Services
         {
             _collection = IdentityExtensions.GetCollection<T>(settings, typeof(T).Name.ToLowerInvariant() + "s");
         }
-        public async virtual Task<T> CreateAsync(T obj, CancellationToken cancellationToken)
+        public virtual async Task<T> CreateAsync(T obj, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await _collection.InsertOneAsync(obj, cancellationToken: cancellationToken);
             return obj;
         }
-        public async virtual Task<List<T>> GetAsync(CancellationToken cancellationToken) => await _collection.Find(obj => true).ToListAsync(cancellationToken: cancellationToken);
-        public async virtual Task<T> GetAsync(string id, CancellationToken cancellationToken) => await _collection.Find(obj => obj.Id == id).FirstOrDefaultAsync(cancellationToken: cancellationToken);
-        public async virtual Task<DeleteResult> DeleteAsync(T objIn, CancellationToken cancellationToken) => await _collection.DeleteOneAsync(obj => obj.Id == objIn.Id, cancellationToken: cancellationToken);
-        public async virtual Task<DeleteResult> DeleteAsync(string id, CancellationToken cancellationToken) => await _collection.DeleteOneAsync(obj => obj.Id == id, cancellationToken: cancellationToken);
-        public async virtual Task<ReplaceOneResult> PutAsync(string id, T objIn, CancellationToken cancellationToken) => await _collection.ReplaceOneAsync(obj => obj.Id == id, objIn, cancellationToken: cancellationToken);
+        public virtual async Task<List<T>> GetAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await _collection.Find(obj => true).ToListAsync(cancellationToken: cancellationToken);
+        }
 
+        public virtual async Task<T> GetAsync(string id, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await _collection.Find(obj => obj.Id == id).FirstOrDefaultAsync(cancellationToken: cancellationToken);
+        }
+
+        public virtual async Task<DeleteResult> DeleteAsync(T objIn, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await _collection.DeleteOneAsync(obj => obj.Id == objIn.Id, cancellationToken: cancellationToken);
+        }
+
+        public virtual async Task<DeleteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await _collection.DeleteOneAsync(obj => obj.Id == id, cancellationToken: cancellationToken);
+        }
+
+        public virtual async Task<ReplaceOneResult> PutAsync(string id, T objIn, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await _collection.ReplaceOneAsync(obj => obj.Id == id, objIn, cancellationToken: cancellationToken);
+        }
     }
 }

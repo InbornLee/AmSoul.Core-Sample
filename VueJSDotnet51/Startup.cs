@@ -28,9 +28,9 @@ namespace VueJSDotnet51
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMongoDb(Configuration);
             services.AddAutoMapper(typeof(MapperConfig));
 
+            services.AddMongoDb(Configuration);
             services.AddIdentityMongoDBProvider<BaseUser, BaseRole>(options =>
             {
                 options.Password.RequireDigit = false;
@@ -52,9 +52,8 @@ namespace VueJSDotnet51
             }
             );
 
-
             services.AddControllers();
-            // 配置JWT身份验证
+   
             services.AddJwtAuthentication(Configuration, tokenOptions);
             services.AddJwtSwaggerGen("TestServer", "v1");
 
@@ -67,7 +66,6 @@ namespace VueJSDotnet51
         {
             builder.RegisterType<BookService>().As<IAsyncRESTService<Book>>();
             builder.RegisterType<TeamService>().As<IAsyncRESTService<Team>>();
-            builder.RegisterType<AuthService>();
             builder.RegisterType<UserServiceBase>().As<IUserService>();
             builder.RegisterType<GridFSServiceBase>().As<IGridFSService>();
         }

@@ -98,7 +98,11 @@ namespace AmSoul.Core.Stores
             if (user == null) throw new ArgumentNullException(nameof(user));
 
             var token = await FindTokenAsync(user, loginProvider, name, cancellationToken);
-            if (token == null)
+            if (token != null)
+            {
+                token.Value = value;
+            }
+            else
             {
                 user.Tokens.Add(new IdentityUserToken<string>()
                 {
@@ -107,10 +111,6 @@ namespace AmSoul.Core.Stores
                     Name = name,
                     Value = value
                 });
-            }
-            else
-            {
-                token.Value = value;
             }
         }
 
@@ -131,9 +131,7 @@ namespace AmSoul.Core.Stores
 
             var entry = await FindTokenAsync(user, loginProvider, name, cancellationToken);
             if (entry != null)
-            {
                 user.Tokens.RemoveAll(x => x.LoginProvider == entry.LoginProvider && x.Name == entry.Name);
-            }
         }
 
         /// <summary>
@@ -206,12 +204,9 @@ namespace AmSoul.Core.Stores
             if (user == null) throw new ArgumentNullException(nameof(user));
 
             var result = await _userCollection.DeleteOneAsync(x => x.Id.Equals(user.Id) && x.ConcurrencyStamp.Equals(user.ConcurrencyStamp), cancellationToken).ConfigureAwait(false);
-            if (!result.IsAcknowledged && result.DeletedCount == 0)
-            {
-                return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-            }
-
-            return IdentityResult.Success;
+            return result.IsAcknowledged || result.DeletedCount != 0
+                ? IdentityResult.Success
+                : IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
         }
 
         /// <summary>
@@ -264,12 +259,9 @@ namespace AmSoul.Core.Stores
 
             var result = await _userCollection.ReplaceOneAsync(x => x.Id.Equals(user.Id) && x.ConcurrencyStamp.Equals(currentConcurrencyStamp), user, ReplaceOptions, cancellationToken).ConfigureAwait(false);
 
-            if (!result.IsAcknowledged && result.ModifiedCount == 0)
-            {
-                return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-            }
-
-            return IdentityResult.Success;
+            return result.IsAcknowledged || result.ModifiedCount != 0
+                ? IdentityResult.Success
+                : IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
         }
 
         /// <summary>
@@ -289,12 +281,11 @@ namespace AmSoul.Core.Stores
 
             foreach (var claim in claims)
             {
-                var identityClaim = new IdentityUserClaim<string>()
+                IdentityUserClaim<string> identityClaim = new()
                 {
                     ClaimType = claim.Type,
                     ClaimValue = claim.Value
                 };
-
                 user.Claims.Add(identityClaim);
             }
 
@@ -950,10 +941,7 @@ namespace AmSoul.Core.Stores
 
             var roleEntity = await FindRoleAsync(normalizedRoleName, cancellationToken);
             if (roleEntity == null)
-            {
                 throw new InvalidOperationException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Role {0} does not exist.", normalizedRoleName));
-            }
-
             user.Roles.Add(ConvertIdToString(roleEntity.Id));
         }
 
@@ -974,9 +962,7 @@ namespace AmSoul.Core.Stores
 
             var roleEntity = await FindRoleAsync(normalizedRoleName, cancellationToken);
             if (roleEntity != null)
-            {
                 user.Roles.Remove(ConvertIdToString(roleEntity.Id));
-            }
         }
 
         /// <summary>
@@ -998,7 +984,7 @@ namespace AmSoul.Core.Stores
             if (role == null) return new List<TUser>();
 
             var filter = Builders<TUser>.Filter.AnyEq(x => x.Roles, ConvertIdToString(role.Id));
-            return (await _userCollection.FindAsync(filter, FindOptions, cancellationToken).ConfigureAwait(true)).ToList();
+            return (await _userCollection.FindAsync(filter, FindOptions, cancellationToken).ConfigureAwait(true)).ToList(cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -1015,19 +1001,21 @@ namespace AmSoul.Core.Stores
             if (user == null) throw new ArgumentNullException(nameof(user));
 
             var userDb = await ByIdAsync(user.Id, cancellationToken).ConfigureAwait(true);
-            if (userDb == null) return new List<string>();
-
-            var roles = new List<string>();
-            foreach (var item in userDb.Roles)
+            if (userDb != null)
             {
-                var dbRole = await _roleCollection.FirstOrDefaultAsync(r => r.Id.Equals(ConvertIdFromString(item)), cancellationToken).ConfigureAwait(true);
-
-                if (dbRole != null)
+                var roles = new List<string>();
+                foreach (var item in userDb.Roles)
                 {
-                    roles.Add(dbRole.Name);
+                    var dbRole = await _roleCollection.FirstOrDefaultAsync(r => r.Id.Equals(ConvertIdFromString(item)), cancellationToken).ConfigureAwait(true);
+
+                    if (dbRole != null)
+                    {
+                        roles.Add(dbRole.Name);
+                    }
                 }
+                return roles;
             }
-            return roles;
+            return new List<string>();
         }
 
         /// <summary>

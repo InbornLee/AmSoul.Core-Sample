@@ -19,28 +19,31 @@ namespace AmSoul.Core.Services
         {
             _mongoDatabase = IdentityExtensions.GetDatabase(settings);
         }
-        public async Task<bool> DeleteFile(string bucketName, string id, CancellationToken cancellationToken)
+        public virtual async Task<bool> DeleteFile(string bucketName, string id, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var bucket = new GridFSBucket(_mongoDatabase, new GridFSBucketOptions { BucketName = bucketName });
             using Task task = bucket.DeleteAsync(new ObjectId(id), cancellationToken: cancellationToken);
             await task;
             return task.IsCompleted;
         }
 
-        public async Task<GridFSDownloadStream> DownloadFile(string bucketName, string id, CancellationToken cancellationToken)
+        public virtual async Task<GridFSDownloadStream> DownloadFile(string bucketName, string id, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var bucket = new GridFSBucket(_mongoDatabase, new GridFSBucketOptions { BucketName = bucketName });
             return await bucket.OpenDownloadStreamAsync(new ObjectId(id), new GridFSDownloadOptions() { CheckMD5 = true }, cancellationToken: cancellationToken);
         }
 
-        public async Task<List<GridFSFileInfo>> FindFilesAsync(string bucketName, FilterDefinition<GridFSFileInfo> filter, CancellationToken cancellationToken)
+        public virtual async Task<List<GridFSFileInfo>> FindFilesAsync(string bucketName, FilterDefinition<GridFSFileInfo> filter, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var bucket = new GridFSBucket(_mongoDatabase, new GridFSBucketOptions { BucketName = bucketName });
             using var result = await bucket.FindAsync(filter, cancellationToken: cancellationToken);
             return await result.ToListAsync(cancellationToken: cancellationToken);
         }
 
-        public string GetMD5Hash(Stream stream)
+        public virtual string GetMD5Hash(Stream stream)
         {
             string result = null;
             byte[] arrbytHashValue;
@@ -59,9 +62,9 @@ namespace AmSoul.Core.Services
             }
             return result;
         }
-
-        public async Task<string> UploadFile(string bucketName, string fileName, Stream fileStream, BsonDocument metaData = null, CancellationToken cancellationToken = default)
+        public virtual async Task<string> UploadFile(string bucketName, string fileName, Stream fileStream, BsonDocument metaData = null, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var bucket = new GridFSBucket(_mongoDatabase, new GridFSBucketOptions { BucketName = bucketName });
             return (await bucket.UploadFromStreamAsync(fileName, fileStream, new GridFSUploadOptions { Metadata = metaData }, cancellationToken: cancellationToken)).ToString();
         }

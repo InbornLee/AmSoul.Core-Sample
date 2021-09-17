@@ -26,11 +26,10 @@ namespace AmSoul.Core.Stores
         /// <summary>
         /// Gets or sets the <see cref="IdentityErrorDescriber"/> for any error that occurred with the current operation.
         /// </summary>
-        public IdentityErrorDescriber ErrorDescriber { get; set; }
-
         private readonly IMongoCollection<TRole> _collection;
 
         private bool _disposed;
+        public IdentityErrorDescriber ErrorDescriber { get; set; }
 
         public RoleStore(IMongoCollection<TRole> collection, IdentityErrorDescriber describer)
         {
@@ -79,12 +78,9 @@ namespace AmSoul.Core.Stores
 
             var result = await _collection.ReplaceOneAsync(x => x.Id.Equals(role.Id) && x.ConcurrencyStamp.Equals(currentConcurrencyStamp), role, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (!result.IsAcknowledged && result.ModifiedCount == 0)
-            {
-                return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-            }
-
-            return IdentityResult.Success;
+            return result.IsAcknowledged || result.ModifiedCount != 0
+                ? IdentityResult.Success
+                : IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
         }
 
         /// <summary>
@@ -101,12 +97,9 @@ namespace AmSoul.Core.Stores
             if (role == null) throw new ArgumentNullException(nameof(role));
 
             var result = await _collection.DeleteOneAsync(x => x.Id.Equals(role.Id) && x.ConcurrencyStamp.Equals(role.ConcurrencyStamp), cancellationToken).ConfigureAwait(false);
-            if (!result.IsAcknowledged && result.DeletedCount == 0)
-            {
-                return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-            }
-
-            return IdentityResult.Success;
+            return result.IsAcknowledged || result.DeletedCount != 0
+                ? IdentityResult.Success
+                : IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
         }
 
         /// <summary>
@@ -254,7 +247,7 @@ namespace AmSoul.Core.Stores
             if (role == null) throw new ArgumentNullException(nameof(role));
             if (claim == null) throw new ArgumentNullException(nameof(claim));
 
-            var identityRoleClaim = new IdentityRoleClaim<string>()
+            IdentityRoleClaim<string> identityRoleClaim = new()
             {
                 ClaimType = claim.Type,
                 ClaimValue = claim.Value
@@ -289,10 +282,7 @@ namespace AmSoul.Core.Stores
         /// </summary>
         protected void ThrowIfDisposed()
         {
-            if (_disposed)
-            {
-                throw new ObjectDisposedException(GetType().Name);
-            }
+            if (_disposed) throw new ObjectDisposedException(GetType().Name);
         }
 
         /// <summary>
@@ -307,11 +297,9 @@ namespace AmSoul.Core.Stores
         /// <returns>An instance of <typeparamref name="TKey"/> representing the provided <paramref name="id"/>.</returns>
         public virtual TKey ConvertIdFromString(string id)
         {
-            if (id == null)
-            {
-                return default(TKey);
-            }
-            return (TKey)TypeDescriptor.GetConverter(typeof(TKey)).ConvertFromInvariantString(id);
+            return id != null
+                ? (TKey)TypeDescriptor.GetConverter(typeof(TKey)).ConvertFromInvariantString(id)
+                : default;
         }
 
         /// <summary>
@@ -321,11 +309,9 @@ namespace AmSoul.Core.Stores
         /// <returns>An <see cref="string"/> representation of the provided <paramref name="id"/>.</returns>
         public virtual string ConvertIdToString(TKey id)
         {
-            if (object.Equals(id, default(TKey)))
-            {
-                return null;
-            }
-            return id.ToString();
+            return Equals(id, default(TKey))
+                ? null
+                : id.ToString();
         }
     }
 }
