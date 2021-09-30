@@ -1,9 +1,12 @@
-﻿namespace AmSoul.FPC1020
+﻿using System.Runtime.InteropServices;
+
+namespace AmSoul.FPC1020
+{
 {
     /// <summary>
-    /// 通讯包Parket识别代码
+    /// 通讯包识别代码 Packet Code
     /// </summary>
-    public enum ParketCode
+    public enum PacketCode
     {
         /// <summary>
         /// 命令包Command packet
@@ -23,9 +26,9 @@
         RCM_DATA_PREFIX_CODE = 0x5AA5
     }
     /// <summary>
-    /// 命令列表 Command List
+    /// 命令代码表 Command Code
     /// </summary>
-    public enum CommandCode
+    public enum CommandCode : byte
     {
         #region System Code (0x0000 ~ 0x001F, 0x0000 : Reserved)
         /// <summary>
@@ -215,22 +218,32 @@
     /// <summary>
     /// 错误代码表 Error Code
     /// </summary>
-    public enum ErrorCode
+    public enum ErrorCode : byte
     {
         /// <summary>
         /// 指令处理成功
         /// Command dispose success
         /// </summary>
-        ERR_SUCCESS = 0x00,
+        SUCCESS = 0,
         /// <summary>
         /// 指令处理失败
         /// Command dispose failed 
         /// </summary>
-        ERR_FAIL = 0x01,
+        FAIL = 1,
         /// <summary>
-        /// 
+        /// 连接错误
         /// </summary>
-        //ERR_CONNECTION = 2,
+        ERR_CONNECTION = 2,
+        /// <summary>
+        /// 包识别码错误
+        /// Packet Identify code
+        /// </summary>
+        ERR_PREFIX_CODE = 3,
+        /// <summary>
+        /// 效验和值错误
+        /// CheckSum Error
+        /// </summary>
+        ERR_CHECKSUM = 4,
         /// <summary>
         /// 与指定编号中 Template 的 1:1比对失败
         /// 1:1 match failed with appointed ID Template.
@@ -336,10 +349,63 @@
         /// </summary>
         ERR_FP_CANCEL = 0x41
     }
-    public enum GD_CODE
+    public enum ParamCode
     {
-        GD_TEMPLATE_NOT_EMPTY = 0x01,
-        GD_TEMPLATE_EMPTY = 0x00
-
+        DeviceID = 0,//表示本设备编号（Device ID）。可设置 1 ~ 255 。
+        SecurityLevel = 1,//表示安全等级（Security Level）：可设置值：1~5 。默认为：3
+        DuplicationCheck = 2,//指纹重复检查（Duplication Check）状态开/关。可设置 0 或 1。
+        Baudrate = 3,//波特率（Baudrate）参数。可设置索引值： 1 ~ 8 。1:9600bps, 2:19200bps, 3:38400bps, 4:57600bps, 5:115200bps,6:230400bps, 7:460800bps, 8:921600bps
+        AutoLearn = 4,//表示指纹模板自学习（Auto Learn）状态开/关。可设置0 或 1 。
+        TimeOut = 5//表示采集指纹超时时间（ Fp TimeOut）参数，可设置值：1秒至60秒。本参数只用于滑动指纹传感器模块，默认值为：5s
     }
-}
+    [StructLayout(LayoutKind.Sequential)]
+    public struct CommandPacket
+    {
+        public ushort Prefix;
+        public byte SrcDeviceID;
+        public byte DstDeviceID;
+        public ushort CMDCode;
+        public ushort DataLen;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+        public byte[] Data;
+        public ushort CheckSum;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ResponsePacket
+    {
+        public ushort Prefix;
+        public byte SrcDeviceID;
+        public byte DstDeviceID;
+        public ushort ResponseCmdCode;
+        public ushort DataLen;
+        public ushort ResultCode;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 14)]
+        public byte[] Data;
+        public ushort CheckSum;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct CommandDataPacket
+    {
+        public ushort Prefix;
+        public byte SrcDeviceID;
+        public byte DstDeviceID;
+        public ushort CMDCode;
+        public ushort DataLen;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 498)]
+        public byte[] Data;
+        public ushort CheckSum;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ResponseDataPacket
+    {
+        public ushort Prefix;
+        public byte SrcDeviceID;
+        public byte DstDeviceID;
+        public ushort ResponseCmdCode;
+        public ushort DataLen;
+        public ushort ResultCode;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 498)]
+        public byte[] Data;
+        public ushort CheckSum;
+    }
+}}
